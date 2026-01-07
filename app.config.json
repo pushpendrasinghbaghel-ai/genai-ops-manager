@@ -1,14 +1,17 @@
 {
   "$schema": "./.dt-app/app.config.schema.json",
-  "environmentUrl": "https://guu84124.apps.dynatrace.com/",
+  "environmentUrl": "https://demo.apps.dynatrace.com/",
   "app": {
     "name": "genai-ops-manager",
     "version": "0.0.0",
-    "description": "A starting project with routing, fetching data, and charting",
+    "description": "GenAI Ops Manager - Analyze, optimize, and govern your GenAI workloads",
     "id": "my.genai.ops.manager",
     "scopes": [
-      { "name": "storage:logs:read", "comment": "default template" },
-      { "name": "storage:buckets:read", "comment": "default template" }
+      { "name": "storage:logs:read", "comment": "Read logs from Grail" },
+      { "name": "storage:buckets:read", "comment": "Read bucket data" },
+      { "name": "storage:spans:read", "comment": "Read GenAI spans from Grail" },
+      { "name": "storage:events:read", "comment": "Read events from Grail" },
+      { "name": "storage:metrics:read", "comment": "Read metrics" }
     ]
   }
 }

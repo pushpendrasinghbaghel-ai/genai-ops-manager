@@ -72,9 +72,9 @@ export const CostForecast = () => {
         daily_input_tokens = sum(coalesce(gen_ai.usage.input_tokens, gen_ai.usage.prompt_tokens, 0)),
         daily_output_tokens = sum(coalesce(gen_ai.usage.output_tokens, gen_ai.usage.completion_tokens, 0)),
         daily_requests = count(),
-        by: { day = bin(timestamp, 1d) }
+        by: { timeframe = bin(start_time, 1d) }
     | fieldsAdd daily_tokens = daily_input_tokens + daily_output_tokens
-    | sort day asc
+    | sort timeframe asc
   `;
 
   // DQL: Token usage by model over time
@@ -83,7 +83,7 @@ export const CostForecast = () => {
     | filter isNotNull(gen_ai.provider.name) OR isNotNull(gen_ai.request.model)
     | summarize 
         tokens = sum(coalesce(gen_ai.usage.input_tokens, 0) + coalesce(gen_ai.usage.output_tokens, 0)),
-        by: { bin(timestamp, 1h), model = gen_ai.request.model }
+        by: { timeframe = bin(start_time, 1h), model = gen_ai.request.model }
   `;
 
   // DQL: Current period totals
@@ -255,7 +255,7 @@ export const CostForecast = () => {
         <Heading level={4}>Historical Cost Trend (Last 30 Days)</Heading>
         {isLoading ? (
           <Paragraph>Loading historical data from Grail...</Paragraph>
-        ) : chartData.length > 0 ? (
+        ) : chartData.length > 0 && chartData[0]?.timeframe ? (
           <TimeseriesChart
             data={convertToTimeseries(chartData, historicalData?.types || [])}
             gapPolicy="connect"
@@ -280,7 +280,7 @@ export const CostForecast = () => {
         <Heading level={4}>Cost by Model (Last 7 Days)</Heading>
         {modelLoading ? (
           <Paragraph>Loading model breakdown from Grail...</Paragraph>
-        ) : costByModel?.records && costByModel.records.length > 0 ? (
+        ) : costByModel?.records && costByModel.records.length > 0 && costByModel.records[0]?.timeframe ? (
           <TimeseriesChart
             data={convertToTimeseries(costByModel.records, costByModel.types || [])}
             gapPolicy="connect"

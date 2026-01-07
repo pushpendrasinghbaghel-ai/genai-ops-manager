@@ -191,36 +191,40 @@ export const PromptAnalyzer = () => {
     { 
       id: "promptPreview", 
       header: "Prompt Preview", 
-      accessor: (row) => (
+      accessor: "promptPreview",
+      autoWidth: false,
+      cell: ({ value }) => (
         <Text style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {row.promptPreview}
+          {String(value || "N/A")}
         </Text>
-      ),
-      autoWidth: false 
+      )
     },
     { id: "model", header: "Model", accessor: "model", autoWidth: true },
     { id: "count", header: "Count", accessor: "count", autoWidth: true },
     { 
       id: "avgTokens", 
       header: "Avg Tokens", 
-      accessor: (row) => row.avgTokens.toLocaleString(), 
-      autoWidth: true 
+      accessor: "avgTokens", 
+      autoWidth: true,
+      cell: ({ value }) => Number(value || 0).toLocaleString()
     },
     { 
       id: "avgCost", 
       header: "Avg Cost", 
-      accessor: (row) => (
-        <Text style={{ color: row.avgCost > 0.05 ? Colors.Text.Warning.Default : Colors.Text.Neutral.Default }}>
-          ${row.avgCost.toFixed(5)}
+      accessor: "avgCost",
+      autoWidth: true,
+      cell: ({ value }) => (
+        <Text style={{ color: Number(value) > 0.05 ? Colors.Text.Warning.Default : Colors.Text.Neutral.Default }}>
+          ${Number(value || 0).toFixed(5)}
         </Text>
-      ), 
-      autoWidth: true 
+      )
     },
     { 
       id: "avgLatency", 
       header: "Avg Latency", 
-      accessor: (row) => `${row.avgLatency.toFixed(0)}ms`, 
-      autoWidth: true 
+      accessor: "avgLatency",
+      autoWidth: true,
+      cell: ({ value }) => `${Number(value || 0).toFixed(0)}ms`
     },
   ];
 

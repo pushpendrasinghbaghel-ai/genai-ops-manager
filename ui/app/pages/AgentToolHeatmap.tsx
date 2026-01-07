@@ -98,7 +98,7 @@ export const AgentToolHeatmap = () => {
     | filter isNotNull(gen_ai.tool.name)
     | summarize 
         calls = count(),
-        by: { bin(timestamp, 1h), tool = gen_ai.tool.name }
+        by: { timeframe = bin(start_time, 1h), tool = gen_ai.tool.name }
   `;
 
   // DQL: Detect potential infinite loops (same tool called many times in a trace)

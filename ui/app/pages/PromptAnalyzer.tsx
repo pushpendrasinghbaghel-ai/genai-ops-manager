@@ -132,20 +132,31 @@ export const PromptAnalyzer = () => {
     return inputTokens * inputRate + outputTokens * outputRate;
   };
 
-  // Process data
-  const promptPatterns: PromptPattern[] = (expensivePrompts?.records || []).map((record: Record<string, unknown>) => {
+  // Process data for insights (keep numeric)
+  const promptPatternsRaw = (expensivePrompts?.records || []).map((record: Record<string, unknown>) => {
     const avgInputTokens = Number(record.avg_input_tokens || 0);
     const avgOutputTokens = Number(record.avg_output_tokens || 0);
     const model = String(record.model || "Unknown");
+    const avgCost = estimateCost(model, avgInputTokens, avgOutputTokens);
     return {
       promptPreview: String(record.prompt_preview || "N/A"),
       count: Number(record.count || 0),
       avgTokens: avgInputTokens + avgOutputTokens,
-      avgCost: estimateCost(model, avgInputTokens, avgOutputTokens),
+      avgCost,
       avgLatency: Number(record.avg_latency || 0),
       model,
     };
   });
+
+  // Process data for display (formatted strings)
+  const promptPatterns = promptPatternsRaw.map((p) => ({
+    promptPreview: p.promptPreview.substring(0, 80),
+    count: p.count,
+    avgTokens: p.avgTokens.toLocaleString(),
+    avgCost: `$${p.avgCost.toFixed(5)}`,
+    avgLatency: `${p.avgLatency.toFixed(0)}ms`,
+    model: p.model,
+  }));
 
   const efficiency = tokenEfficiency?.records?.[0] as Record<string, unknown> | undefined;
   const inputOutputRatio = Number(efficiency?.input_output_ratio || 0);
@@ -170,7 +181,7 @@ export const PromptAnalyzer = () => {
     });
   }
 
-  const expensivePattern = promptPatterns.find(p => p.avgCost > 0.1);
+  const expensivePattern = promptPatternsRaw.find(p => p.avgCost > 0.1);
   if (expensivePattern) {
     insights.push({
       type: "warning",
@@ -192,12 +203,7 @@ export const PromptAnalyzer = () => {
       id: "promptPreview", 
       header: "Prompt Preview", 
       accessor: "promptPreview",
-      autoWidth: false,
-      cell: ({ value }) => (
-        <Text style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {String(value || "N/A")}
-        </Text>
-      )
+      autoWidth: false
     },
     { id: "model", header: "Model", accessor: "model", autoWidth: true },
     { id: "count", header: "Count", accessor: "count", autoWidth: true },
@@ -205,26 +211,19 @@ export const PromptAnalyzer = () => {
       id: "avgTokens", 
       header: "Avg Tokens", 
       accessor: "avgTokens", 
-      autoWidth: true,
-      cell: ({ value }) => Number(value || 0).toLocaleString()
+      autoWidth: true
     },
     { 
       id: "avgCost", 
       header: "Avg Cost", 
       accessor: "avgCost",
-      autoWidth: true,
-      cell: ({ value }) => (
-        <Text style={{ color: Number(value) > 0.05 ? Colors.Text.Warning.Default : Colors.Text.Neutral.Default }}>
-          ${Number(value || 0).toFixed(5)}
-        </Text>
-      )
+      autoWidth: true
     },
     { 
       id: "avgLatency", 
       header: "Avg Latency", 
       accessor: "avgLatency",
-      autoWidth: true,
-      cell: ({ value }) => `${Number(value || 0).toFixed(0)}ms`
+      autoWidth: true
     },
   ];
 

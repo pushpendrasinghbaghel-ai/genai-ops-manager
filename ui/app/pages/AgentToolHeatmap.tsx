@@ -60,16 +60,15 @@ const HeatmapCell = ({ value, max, label }: { value: number; max: number; label:
 export const AgentToolHeatmap = () => {
   const [timeRange, setTimeRange] = useState("24h");
 
-  // DQL: Get tool usage statistics
+  // DQL: Get tool usage statistics (tools are identified by traceloop.span.kind = "tool")
   const toolUsageQuery = `
     fetch spans, from: now()-${timeRange}
-    | filter isNotNull(gen_ai.tool.name)
+    | filter traceloop.span.kind == "tool"
     | summarize 
         call_count = count(),
         avg_duration = avg(duration) / 1000000,
         error_count = countIf(isNotNull(error.type)),
-        avg_tokens = avg(coalesce(gen_ai.usage.input_tokens, 0) + coalesce(gen_ai.usage.output_tokens, 0)),
-        by: { tool_name = gen_ai.tool.name }
+        by: { tool_name = span.name }
     | fieldsAdd error_rate = toDouble(error_count) / toDouble(call_count) * 100
     | sort call_count desc
     | limit 20
@@ -78,16 +77,16 @@ export const AgentToolHeatmap = () => {
   // DQL: Get agent-level tool sequences (which tools are called together)
   const agentFlowQuery = `
     fetch spans, from: now()-${timeRange}
-    | filter isNotNull(gen_ai.tool.name)
+    | filter traceloop.span.kind == "tool"
     | summarize 
-        tool_sequence = collectDistinct(gen_ai.tool.name),
+        tool_sequence = collectDistinct(span.name),
         call_count = count(),
         avg_duration = avg(duration) / 1000000,
-        by: { trace_id = trace.id, service_name = dt.entity.service }
+        by: { trace_id = trace.id, agent_name = gen_ai.agent.name }
     | summarize 
         count = count(),
         avg_duration = avg(avg_duration),
-        by: { agent_name = service_name, tool_sequence }
+        by: { agent_name, tool_sequence }
     | sort count desc
     | limit 10
   `;
@@ -95,19 +94,19 @@ export const AgentToolHeatmap = () => {
   // DQL: Tool call frequency over time
   const toolTrendQuery = `
     fetch spans, from: now()-${timeRange}
-    | filter isNotNull(gen_ai.tool.name)
+    | filter traceloop.span.kind == "tool"
     | summarize 
         calls = count(),
-        by: { timeframe = bin(start_time, 1h), tool = gen_ai.tool.name }
+        by: { timeframe = bin(start_time, 1h), tool = span.name }
   `;
 
   // DQL: Detect potential infinite loops (same tool called many times in a trace)
   const loopDetectionQuery = `
     fetch spans, from: now()-${timeRange}
-    | filter isNotNull(gen_ai.tool.name)
+    | filter traceloop.span.kind == "tool"
     | summarize 
         tool_calls = count(),
-        by: { trace_id = trace.id, tool_name = gen_ai.tool.name }
+        by: { trace_id = trace.id, tool_name = span.name }
     | filter tool_calls > 10
     | summarize 
         suspicious_traces = count(),
@@ -124,12 +123,12 @@ export const AgentToolHeatmap = () => {
 
   // Process tool usage data
   const tools: ToolUsage[] = (toolUsage?.records || []).map((record: Record<string, unknown>) => ({
-    toolName: String(record.tool_name || "Unknown"),
+    toolName: String(record.tool_name || "Unknown").replace(".tool", ""),
     callCount: Number(record.call_count || 0),
     avgDuration: Number(record.avg_duration || 0),
     errorCount: Number(record.error_count || 0),
     errorRate: Number(record.error_rate || 0),
-    avgTokens: Number(record.avg_tokens || 0),
+    avgTokens: 0, // Tools don't have token usage
   }));
 
   const maxCalls = Math.max(...tools.map(t => t.callCount), 1);
@@ -149,39 +148,21 @@ export const AgentToolHeatmap = () => {
     avgDuration: Number(record.avg_duration || 0),
   }));
 
+  // Format tools for display
+  const toolsForDisplay = tools.map(t => ({
+    toolName: t.toolName,
+    callCount: t.callCount,
+    avgDuration: `${t.avgDuration.toFixed(0)}ms`,
+    errorRate: `${t.errorRate.toFixed(2)}%`,
+    health: t.errorRate > 10 ? "⚠️ Degraded" : "✅ Healthy",
+  }));
+
   const toolColumns = [
     { id: "toolName", header: "Tool Name", accessor: "toolName", autoWidth: true },
     { id: "callCount", header: "Calls", accessor: "callCount", autoWidth: true },
-    { 
-      id: "avgDuration", 
-      header: "Avg Duration", 
-      accessor: (row: ToolUsage) => `${row.avgDuration.toFixed(0)}ms`, 
-      autoWidth: true 
-    },
-    { 
-      id: "errorRate", 
-      header: "Error Rate", 
-      accessor: (row: ToolUsage) => (
-        <Text style={{ color: row.errorRate > 5 ? Colors.Text.Critical.Default : Colors.Text.Success.Default }}>
-          {row.errorRate.toFixed(2)}%
-        </Text>
-      ), 
-      autoWidth: true 
-    },
-    { 
-      id: "status", 
-      header: "Health", 
-      accessor: (row: ToolUsage) => (
-        <Flex alignItems="center" gap={4}>
-          {row.errorRate > 10 ? (
-            <><WarningIcon style={{ color: Colors.Text.Critical.Default }} /> <Text>Degraded</Text></>
-          ) : (
-            <><CheckmarkIcon style={{ color: Colors.Text.Success.Default }} /> <Text>Healthy</Text></>
-          )}
-        </Flex>
-      ), 
-      autoWidth: true 
-    },
+    { id: "avgDuration", header: "Avg Duration", accessor: "avgDuration", autoWidth: true },
+    { id: "errorRate", header: "Error Rate", accessor: "errorRate", autoWidth: true },
+    { id: "health", header: "Health", accessor: "health", autoWidth: true },
   ];
 
   return (
@@ -251,8 +232,8 @@ export const AgentToolHeatmap = () => {
       {/* Tool Usage Table */}
       <Flex flexDirection="column" gap={12}>
         <Heading level={4}>Tool Usage Details</Heading>
-        {tools.length > 0 ? (
-          <DataTable data={tools} columns={toolColumns} />
+        {toolsForDisplay.length > 0 ? (
+          <DataTable data={toolsForDisplay} columns={toolColumns} />
         ) : (
           <Flex
             padding={32}

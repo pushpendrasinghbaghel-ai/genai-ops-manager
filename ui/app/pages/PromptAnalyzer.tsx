@@ -215,11 +215,18 @@ export const PromptAnalyzer = () => {
         avg_output_per_request = toDouble(total_output) / toDouble(request_count)
   `;
 
-  const { data: expensivePrompts, isLoading: expensiveLoading, refetch } = useDql({ query: expensivePromptsQuery });
-  const { data: highTokenPrompts, isLoading: highTokenLoading } = useDql({ query: highTokenPromptsQuery });
-  const { data: tokenEfficiency, isLoading: efficiencyLoading } = useDql({ query: tokenEfficiencyQuery });
+  const { data: expensivePrompts, isLoading: expensiveLoading, refetch: refetchExpensive } = useDql({ query: expensivePromptsQuery });
+  const { data: highTokenPrompts, isLoading: highTokenLoading, refetch: refetchHighToken } = useDql({ query: highTokenPromptsQuery });
+  const { data: tokenEfficiency, isLoading: efficiencyLoading, refetch: refetchEfficiency } = useDql({ query: tokenEfficiencyQuery });
 
   const isLoading = expensiveLoading || highTokenLoading || efficiencyLoading;
+  
+  // Unified refetch function for all queries
+  const refetchAll = () => {
+    refetchExpensive();
+    refetchHighToken();
+    refetchEfficiency();
+  };
 
   // Estimate cost per token based on model
   const estimateCost = (model: string, inputTokens: number, outputTokens: number): number => {
@@ -389,7 +396,7 @@ export const PromptAnalyzer = () => {
             style={{ width: 100 }}
           />
         </Flex>
-        <Button variant="accent" onClick={() => refetch()} disabled={isLoading}>
+        <Button variant="accent" onClick={() => refetchAll()} disabled={isLoading}>
           <Button.Prefix><ResearchIcon /></Button.Prefix>
           Analyze Patterns
         </Button>

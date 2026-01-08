@@ -1,14 +1,50 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph, Strong, Text, Code } from "@dynatrace/strato-components/typography";
 import { Button } from "@dynatrace/strato-components/buttons";
-import { Select, SelectOption, TextInput } from "@dynatrace/strato-components-preview/forms";
+import { TextInput } from "@dynatrace/strato-components-preview/forms";
+import { TimeframeSelector } from "@dynatrace/strato-components-preview/filters";
+import type { Timeframe } from "@dynatrace/strato-components-preview/core";
 import { DataTable } from "@dynatrace/strato-components-preview/tables";
 import { useDql } from "@dynatrace-sdk/react-hooks";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import Borders from "@dynatrace/strato-design-tokens/borders";
 import BoxShadows from "@dynatrace/strato-design-tokens/box-shadows";
 import { ResearchIcon, IdeaIcon, WarningIcon, SecurityIcon } from "@dynatrace/strato-icons";
+
+/**
+ * Create a default Timeframe object (last 24 hours)
+ */
+const createDefaultTimeframe = (): Timeframe => ({
+  from: { value: 'now()-24h', type: 'expression', absoluteDate: new Date().toISOString() },
+  to: { value: 'now()', type: 'expression', absoluteDate: new Date().toISOString() }
+});
+
+/**
+ * Get display label for timeframe
+ */
+const getTimeframeLabel = (timeframe: Timeframe): string => {
+  const from = timeframe.from?.value || 'now()-24h';
+  if (from === 'now()-24h') return 'Last 24 Hours';
+  if (from === 'now()-1h') return 'Last Hour';
+  if (from === 'now()-6h') return 'Last 6 Hours';
+  if (from === 'now()-12h') return 'Last 12 Hours';
+  if (from === 'now()-7d') return 'Last 7 Days';
+  if (from === 'now()-30d') return 'Last 30 Days';
+  return 'Custom';
+};
+
+/**
+ * Convert Timeframe to DQL clause
+ */
+const getTimeframeDqlClause = (timeframe: Timeframe | null): string => {
+  if (!timeframe) {
+    return 'from: now()-24h, to: now()';
+  }
+  const fromValue = timeframe.from?.value || 'now()-24h';
+  const toValue = timeframe.to?.value || 'now()';
+  return `from: ${fromValue}, to: ${toValue}`;
+};
 
 type PromptFlag = {
   type: 'pii' | 'hallucination' | 'injection' | 'sensitive' | 'bias';
@@ -127,13 +163,16 @@ const InsightCard = ({
 };
 
 export const PromptAnalyzer = () => {
-  const [timeRange, setTimeRange] = useState("24h");
+  const [timeframe, setTimeframe] = useState<Timeframe>(createDefaultTimeframe());
   const [minCost, setMinCost] = useState("0.01");
   const [searchPattern, setSearchPattern] = useState("");
 
+  // Build DQL time clause from timeframe
+  const timeClause = useMemo(() => getTimeframeDqlClause(timeframe), [timeframe]);
+
   // DQL: Find prompt patterns with high token usage
   const expensivePromptsQuery = `
-    fetch spans, from: now()-${timeRange}
+    fetch spans, ${timeClause}
     | filter isNotNull(gen_ai.provider.name) OR isNotNull(gen_ai.request.model)
     | filter isNotNull(gen_ai.prompt.0.content)
     | fieldsAdd prompt_preview = substring(gen_ai.prompt.0.content, from:0, to:100)
@@ -151,7 +190,7 @@ export const PromptAnalyzer = () => {
 
   // DQL: Find prompts with high token usage (potentially inefficient)
   const highTokenPromptsQuery = `
-    fetch spans, from: now()-${timeRange}
+    fetch spans, ${timeClause}
     | filter isNotNull(gen_ai.provider.name) OR isNotNull(gen_ai.request.model)
     | filter coalesce(gen_ai.usage.input_tokens, gen_ai.usage.prompt_tokens, 0) > 1000
     | summarize 
@@ -164,7 +203,7 @@ export const PromptAnalyzer = () => {
 
   // DQL: Token efficiency analysis
   const tokenEfficiencyQuery = `
-    fetch spans, from: now()-${timeRange}
+    fetch spans, ${timeClause}
     | filter isNotNull(gen_ai.provider.name) OR isNotNull(gen_ai.request.model)
     | summarize 
         total_input = sum(coalesce(gen_ai.usage.input_tokens, gen_ai.usage.prompt_tokens, 0)),
@@ -336,12 +375,10 @@ export const PromptAnalyzer = () => {
       <Flex gap={16} alignItems="flex-end" flexWrap="wrap">
         <Flex flexDirection="column" gap={4}>
           <Text>Time Range</Text>
-          <Select value={timeRange} onChange={(val) => setTimeRange(val as string)}>
-            <SelectOption value="1h">Last 1 hour</SelectOption>
-            <SelectOption value="24h">Last 24 hours</SelectOption>
-            <SelectOption value="7d">Last 7 days</SelectOption>
-            <SelectOption value="30d">Last 30 days</SelectOption>
-          </Select>
+          <TimeframeSelector
+            value={timeframe}
+            onChange={(tf) => tf && setTimeframe(tf)}
+          />
         </Flex>
         <Flex flexDirection="column" gap={4}>
           <Text>Min Cost ($)</Text>

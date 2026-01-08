@@ -2,8 +2,8 @@
   "$schema": "./.dt-app/app.config.schema.json",
   "environmentUrl": "https://demo.apps.dynatrace.com/",
   "app": {
-    "name": "genai-ops-manager",
-    "version": "0.0.0",
+    "name": "GenAI Ops Manager",
+    "version": "0.0.1",
     "description": "GenAI Ops Manager - Analyze, optimize, and govern your GenAI workloads",
     "id": "my.genai.ops.manager",
     "scopes": [
@@ -12,6 +12,17 @@
       { "name": "storage:spans:read", "comment": "Read GenAI spans from Grail" },
       { "name": "storage:events:read", "comment": "Read events from Grail" },
       { "name": "storage:metrics:read", "comment": "Read metrics" }
+    ],
+    "entryPoints": [
+      {
+        "type": "ui",
+        "location": "sidebar",
+        "id": "genai-ops-manager",
+        "name": "GenAI Ops Manager",
+        "description": "Monitor and optimize GenAI workloads",
+        "icon": "artificial-intelligence",
+        "path": "/ui"
+      }
     ]
   }
 }

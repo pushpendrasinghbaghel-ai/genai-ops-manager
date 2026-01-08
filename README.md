@@ -27,9 +27,18 @@ A comprehensive Dynatrace App for monitoring, analyzing, and optimizing Generati
 - **Migration recommendations**: Identify opportunities to switch to cheaper alternatives
 
 ### 🔍 Prompt Pattern Analyzer
-- **Expensive prompt detection**: Find prompts that are costing the most
+- **Security Detection**: AI-powered analysis for PII, prompt injection, and sensitive data
+  - 🔐 **PII Detection**: SSN, emails, phone numbers, credit cards, DOB, medical records (HIPAA/PHI)
+  - ⚠️ **Injection Attempts**: Jailbreak patterns, instruction override, role-playing attacks
+  - 🔒 **Sensitive Data**: Passwords, API keys, tokens, internal company data
+  - ⚖️ **Bias Risk**: Protected characteristics in HR/hiring/decision contexts
+  - 🎭 **Hallucination Risk**: Real-time data queries without grounding or factual verification
+  - 💰 **Cost Analysis**: High token/cost pattern identification
+  - 🔄 **Cache Opportunities**: Repetitive patterns eligible for semantic caching (15+ occurrences)
+- **Compliance & Governance**: Comprehensive security scoring and risk assessment
+- **Actionable Insights**: AI-generated recommendations for remediation
+- **Filter & Search**: Quickly find problematic patterns by issue type
 - **Token efficiency analysis**: Input/output ratio and average token usage
-- **AI insights**: Automatic detection of inefficient patterns
 - **Optimization recommendations**: Suggestions for prompt engineering improvements
 
 ### 🔧 Agent Tool Heatmap
@@ -154,6 +163,42 @@ fetch spans, from: now()-24h
 | filter traceloop.span.kind == "tool"
 | summarize call_count = count(), by: { tool_name = span.name }
 ```
+
+### Prompt Analysis with Security Detection
+```dql
+fetch spans, from: now()-24h
+| filter isNotNull(gen_ai.provider.name) OR isNotNull(gen_ai.request.model)
+| fieldsAdd prompt = coalesce(gen_ai.prompt.1.content, gen_ai.prompt.0.content)
+| filter isNotNull(prompt)
+| fieldsAdd prompt_preview = substring(prompt, from:0, to:200)
+| summarize 
+    count = count(),
+    avg_input_tokens = avg(coalesce(gen_ai.usage.input_tokens, 0)),
+    avg_output_tokens = avg(coalesce(gen_ai.usage.output_tokens, 0)),
+    by: { prompt_preview, model = gen_ai.request.model, provider = gen_ai.provider.name }
+| sort count desc
+```
+
+## 🔒 Security Features
+
+The Prompt Analyzer includes comprehensive security detection patterns:
+
+| Detection Type | Description | Severity Levels |
+|----------------|-------------|-----------------|
+| 🔐 **PII** | SSN, email, phone, credit cards, DOB, medical records (HIPAA/PHI) | Critical, High, Medium |
+| ⚠️ **Injection** | Jailbreak attempts, instruction override, role-playing attacks | Critical |
+| 🔒 **Sensitive** | Passwords, API keys, tokens, internal company data | High |
+| ⚖️ **Bias** | Protected characteristics in HR/hiring/decision contexts | High |
+| 🎭 **Hallucination** | Real-time data queries without grounding/verification | Medium, Low |
+| 💰 **Cost** | High token/cost patterns requiring optimization | Critical to Low |
+| 🔄 **Repetitive** | Patterns repeated 15+ times (cache candidates) | Low |
+
+**Example Use Cases:**
+- **Compliance**: Detect HIPAA/PHI violations before data reaches LLMs
+- **Security**: Identify prompt injection and jailbreak attempts
+- **Cost Optimization**: Find expensive patterns and cache opportunities
+- **Bias Prevention**: Flag protected characteristics in decision-making prompts
+- **Quality**: Detect hallucination risks from real-time data queries
 
 ## 🧪 Test Coverage
 

@@ -4,6 +4,7 @@ import { Heading, Paragraph, Strong, Text } from "@dynatrace/strato-components/t
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Select, SelectOption } from "@dynatrace/strato-components-preview/forms";
 import { DataTable } from "@dynatrace/strato-components-preview/tables";
+import { ProgressCircle } from "@dynatrace/strato-components/content";
 import { useDql } from "@dynatrace-sdk/react-hooks";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import Borders from "@dynatrace/strato-design-tokens/borders";
@@ -187,7 +188,39 @@ export const ModelCostComparison = () => {
         </Flex>
       </Flex>
 
+      {/* Loading State */}
+      {isLoading && (
+        <Flex justifyContent="center" alignItems="center" padding={40} gap={12}>
+          <ProgressCircle />
+          <Text>Loading model comparison data...</Text>
+        </Flex>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && tableData.length === 0 && (
+        <Flex
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          padding={64}
+          gap={16}
+          style={{
+            border: `1px dashed ${Colors.Border.Neutral.Default}`,
+            borderRadius: Borders.Radius.Container.Default,
+            background: Colors.Background.Surface.Default
+          }}
+        >
+          <MoneyIcon style={{ fontSize: 48, color: Colors.Text.Neutral.Subdued }} />
+          <Heading level={4} style={{ color: Colors.Text.Neutral.Subdued }}>No Model Data Found</Heading>
+          <Text style={{ textAlign: 'center', maxWidth: 500, color: Colors.Text.Neutral.Subdued }}>
+            No model usage data found in the selected timeframe. Try adjusting the time range.
+          </Text>
+        </Flex>
+      )}
+
       {/* Summary Cards */}
+      {!isLoading && tableData.length > 0 && (
+        <>
       <Flex gap={16} flexWrap="wrap">
         <SummaryCard title="Total Requests" value={totalRequests.toLocaleString()} subtitle={`Last ${timeRange}`} />
         <SummaryCard title="Total Tokens" value={totalTokens.toLocaleString()} subtitle="Input + Output" />
@@ -300,6 +333,8 @@ export const ModelCostComparison = () => {
           ))}
         </Flex>
       </Flex>
+      </>
+      )}
     </Flex>
   );
 };

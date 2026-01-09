@@ -3,6 +3,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph, Strong, Text } from "@dynatrace/strato-components/typography";
 import { Button } from "@dynatrace/strato-components/buttons";
+import { ProgressCircle } from "@dynatrace/strato-components/content";
 import { Select, SelectOption } from "@dynatrace/strato-components-preview/forms";
 import { useDql } from "@dynatrace-sdk/react-hooks";
 import Colors from "@dynatrace/strato-design-tokens/colors";
@@ -251,14 +252,45 @@ export const Home = () => {
         </Flex>
       )}
 
+      {/* Loading State */}
+      {isLoading && (
+        <Flex justifyContent="center" alignItems="center" padding={40}>
+          <ProgressCircle />
+          <Text style={{ marginLeft: 12 }}>Loading GenAI metrics...</Text>
+        </Flex>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && totalRequests === 0 && (
+        <Flex
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          padding={64}
+          gap={16}
+          style={{
+            border: `1px dashed ${Colors.Border.Neutral.Default}`,
+            borderRadius: Borders.Radius.Container.Default,
+            background: Colors.Background.Surface.Default
+          }}
+        >
+          <AIModelIcon style={{ fontSize: 48, color: Colors.Text.Neutral.Subdued }} />
+          <Heading level={4} style={{ color: Colors.Text.Neutral.Subdued }}>No GenAI Data Found</Heading>
+          <Text style={{ textAlign: 'center', maxWidth: 500, color: Colors.Text.Neutral.Subdued }}>
+            No GenAI spans found in the selected timeframe. Make sure your applications are instrumented with GenAI observability.
+          </Text>
+        </Flex>
+      )}
+
       {/* Summary Cards */}
-      <Flex gap={16} flexWrap="wrap">
-        <SummaryCard
-          title="Total Requests"
-          value={totalRequests.toLocaleString()}
-          icon={<LineChartIcon />}
-          subtitle="In selected timeframe"
-        />
+      {!isLoading && totalRequests > 0 && (
+        <Flex gap={16} flexWrap="wrap">
+          <SummaryCard
+            title="Total Requests"
+            value={totalRequests.toLocaleString()}
+            icon={<LineChartIcon />}
+            subtitle="In selected timeframe"
+          />
         <SummaryCard
           title="Estimated Cost"
           value={`$${totalCost.toFixed(2)}`}
@@ -284,7 +316,8 @@ export const Home = () => {
           icon={<AIModelIcon />}
           subtitle="Unique models"
         />
-      </Flex>
+        </Flex>
+      )}
 
       {/* Feature Cards */}
       <Flex flexDirection="column" gap={16}>

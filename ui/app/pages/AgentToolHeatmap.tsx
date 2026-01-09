@@ -4,6 +4,7 @@ import { Heading, Paragraph, Strong, Text } from "@dynatrace/strato-components/t
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Select, SelectOption } from "@dynatrace/strato-components-preview/forms";
 import { DataTable } from "@dynatrace/strato-components-preview/tables";
+import { ProgressCircle } from "@dynatrace/strato-components/content";
 import { useDql } from "@dynatrace-sdk/react-hooks";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import Borders from "@dynatrace/strato-design-tokens/borders";

@@ -6,6 +6,7 @@ import { TextInput } from "@dynatrace/strato-components-preview/forms";
 import { TimeframeSelector } from "@dynatrace/strato-components-preview/filters";
 import type { Timeframe } from "@dynatrace/strato-components-preview/core";
 import { DataTable } from "@dynatrace/strato-components-preview/tables";
+import { ProgressCircle } from "@dynatrace/strato-components/content";
 import { useDql } from "@dynatrace-sdk/react-hooks";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import Borders from "@dynatrace/strato-design-tokens/borders";
@@ -397,8 +398,11 @@ export const PromptAnalyzer = () => {
           />
         </Flex>
         <Button variant="accent" onClick={() => refetchAll()} disabled={isLoading}>
-          <Button.Prefix><ResearchIcon /></Button.Prefix>
-          Analyze Patterns
+          {isLoading ? (
+            <><ProgressCircle size="small" /> Analyzing...</>
+          ) : (
+            <><Button.Prefix><ResearchIcon /></Button.Prefix> Analyze Patterns</>
+          )}
         </Button>
       </Flex>
 
@@ -442,20 +446,30 @@ export const PromptAnalyzer = () => {
       <Flex flexDirection="column" gap={12}>
         <Heading level={4}>Top Prompt Patterns by Cost</Heading>
         {isLoading ? (
-          <Paragraph>Analyzing prompt patterns from Grail...</Paragraph>
+          <Flex justifyContent="center" alignItems="center" padding={40} gap={12}>
+            <ProgressCircle />
+            <Text>Analyzing prompt patterns from Grail...</Text>
+          </Flex>
         ) : promptPatterns.length > 0 ? (
           <DataTable data={promptPatterns} columns={columns} />
         ) : (
           <Flex
-            padding={32}
+            flexDirection="column"
+            alignItems="center"
             justifyContent="center"
+            padding={64}
+            gap={16}
             style={{
               background: Colors.Background.Surface.Default,
               borderRadius: Borders.Radius.Container.Default,
-              border: `1px solid ${Colors.Border.Neutral.Default}`
+              border: `1px dashed ${Colors.Border.Neutral.Default}`
             }}
           >
-            <Paragraph>No prompt data found matching criteria. Ensure prompt content capture is enabled in your instrumentation.</Paragraph>
+            <ResearchIcon style={{ fontSize: 48, color: Colors.Text.Neutral.Subdued }} />
+            <Heading level={4} style={{ color: Colors.Text.Neutral.Subdued }}>No Prompts Found</Heading>
+            <Text style={{ textAlign: 'center', maxWidth: 500, color: Colors.Text.Neutral.Subdued }}>
+              No prompt patterns found in the selected timeframe. Ensure prompt content capture is enabled in your instrumentation.
+            </Text>
           </Flex>
         )}
       </Flex>

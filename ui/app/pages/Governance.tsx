@@ -32,11 +32,13 @@ export const Governance = () => {
     // Dynamic DQL hook usage logic
     // We only fetch when simulatingRuleId is set.
     const activePattern = rules.find(r => r.id === simulatingRuleId)?.pattern || "";
+    // Escape backslashes for DQL (backslashes need to be doubled in DQL strings)
+    const escapedPattern = activePattern.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const dqlQuery = simulatingRuleId 
         ? `fetch spans, from: now()-24h
            | filter isNotNull(gen_ai.provider.name) OR isNotNull(gen_ai.request.model)
            | filter isNotNull(gen_ai.prompt.0.content)
-           | filter matchesPhrase(gen_ai.prompt.0.content, '${activePattern}')
+           | filter matchesPhrase(gen_ai.prompt.0.content, '${escapedPattern}')
            | summarize match_count = count()`
         : null;
 

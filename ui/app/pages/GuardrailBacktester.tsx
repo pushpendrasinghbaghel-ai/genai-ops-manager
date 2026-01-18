@@ -158,12 +158,14 @@ export const GuardrailBacktester = () => {
 
   // Dynamic DQL for backtesting
   const activeRule = rules.find(r => r.id === activeBacktest);
+  // Escape backslashes for DQL (backslashes need to be doubled in DQL strings)
+  const escapedPattern = activeRule?.pattern.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const backtestQuery = activeRule 
     ? `
       fetch spans, from: now()-${timeRange}
       | filter isNotNull(gen_ai.provider.name) OR isNotNull(gen_ai.request.model)
       | filter isNotNull(gen_ai.prompt.0.content)
-      | filter matchesPhrase(gen_ai.prompt.0.content, "${activeRule.pattern.replace(/"/g, '\\"')}")
+      | filter matchesPhrase(gen_ai.prompt.0.content, "${escapedPattern}")
       | summarize 
           match_count = count()
     `
